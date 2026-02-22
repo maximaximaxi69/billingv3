@@ -5,7 +5,6 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import customtkinter as ctk
-from PIL import Image
 
 from .documents import Client, CompanySettings, Product, build_document, generate_invoice_pdf
 from .invoice import InvoiceItem
@@ -22,7 +21,7 @@ DOC_TYPE_LABELS = {
 class BillingApp(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Billing Desktop")
+        self.title("Billing Pro Desktop")
         self.geometry("1480x900")
 
         ctk.set_appearance_mode("dark")
@@ -42,7 +41,6 @@ class BillingApp(ctk.CTk):
         self.configure(fg_color=self.palette["bg"])
 
         self.repo = BillingRepository()
-        self.icons = self._load_icons()
         self.current_items: list[InvoiceItem] = []
 
         self._build_layout()
@@ -52,33 +50,11 @@ class BillingApp(ctk.CTk):
         self._refresh_documents()
         self._refresh_dropdowns()
 
-    def _load_icons(self) -> dict[str, ctk.CTkImage | None]:
-        icon_files = {
-            "new": "new_document.png",
-            "docs": "documents.png",
-            "clients": "clients.png",
-            "products": "add.png",
-            "settings": "settings.png",
-            "save": "save.png",
-            "add": "add.png",
-            "refresh": "refresh.png",
-            "paid": "paid.png",
-            "pdf": "documents.png",
-        }
-        icon_dir = Path("assets/icons")
-        out: dict[str, ctk.CTkImage | None] = {}
-        for key, filename in icon_files.items():
-            p = icon_dir / filename
-            if p.exists():
-                img = Image.open(p)
-                out[key] = ctk.CTkImage(light_image=img, dark_image=img, size=(18, 18))
-            else:
-                out[key] = None
-        return out
-
     def _card(self, parent: ctk.CTkFrame, title: str) -> ctk.CTkFrame:
         card = ctk.CTkFrame(parent, fg_color=self.palette["card"], corner_radius=16, border_width=1, border_color=self.palette["border"])
-        ctk.CTkLabel(card, text=title, text_color=self.palette["text"], font=ctk.CTkFont(size=20, weight="bold")).pack(anchor="w", padx=18, pady=(14, 10))
+        card.grid_columnconfigure(0, weight=1)
+        # FIX: Changed .pack() to .grid() to prevent crash
+        ctk.CTkLabel(card, text=title, text_color=self.palette["text"], font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, sticky="w", padx=18, pady=(14, 10))
         return card
 
     def _build_layout(self) -> None:
@@ -88,22 +64,26 @@ class BillingApp(ctk.CTk):
         sidebar = ctk.CTkFrame(self, fg_color=self.palette["sidebar"], width=270, corner_radius=0)
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
+        sidebar.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(sidebar, text="Billing Pro", font=ctk.CTkFont(size=32, weight="bold"), text_color=self.palette["text"]).pack(anchor="w", padx=24, pady=(28, 2))
-        ctk.CTkLabel(sidebar, text="Professional invoicing workflow", text_color=self.palette["muted"]).pack(anchor="w", padx=24, pady=(0, 16))
+        # FIX: Changed .pack() to .grid()
+        ctk.CTkLabel(sidebar, text="Billing Pro", font=ctk.CTkFont(size=32, weight="bold"), text_color=self.palette["text"]).grid(row=0, column=0, sticky="w", padx=24, pady=(28, 2))
+        ctk.CTkLabel(sidebar, text="Professional invoicing workflow", text_color=self.palette["muted"]).grid(row=1, column=0, sticky="w", padx=24, pady=(0, 16))
 
         self.nav_buttons = {}
-        for key, label, icon in [
-            ("new", "New Document", "new"),
-            ("docs", "Documents", "docs"),
-            ("clients", "Clients", "clients"),
-            ("products", "Products", "products"),
-            ("settings", "Settings", "settings"),
-        ]:
+        # ADDED: Professional Emoji Icons
+        nav_items = [
+            ("new", "📄  New Document"),
+            ("docs", "📂  Documents"),
+            ("clients", "👥  Clients"),
+            ("products", "📦  Products"),
+            ("settings", "⚙️  Settings"),
+        ]
+
+        for i, (key, label) in enumerate(nav_items, start=2):
             btn = ctk.CTkButton(
                 sidebar,
                 text=label,
-                image=self.icons[icon],
                 anchor="w",
                 fg_color=self.palette["card"],
                 hover_color=self.palette["accent_hover"],
@@ -111,11 +91,12 @@ class BillingApp(ctk.CTk):
                 corner_radius=12,
                 command=lambda k=key: self._show_view(k),
             )
-            btn.pack(fill="x", padx=20, pady=7)
+            # FIX: Changed .pack() to .grid() and fill="x" to sticky="ew"
+            btn.grid(row=i, column=0, sticky="ew", padx=20, pady=7)
             self.nav_buttons[key] = btn
 
         self.message_label = ctk.CTkLabel(sidebar, text="", text_color="#fca5a5", wraplength=220, justify="left")
-        self.message_label.pack(anchor="w", padx=22, pady=(24, 0))
+        self.message_label.grid(row=len(nav_items) + 2, column=0, sticky="w", padx=22, pady=(24, 0))
 
         self.content = ctk.CTkFrame(self, fg_color=self.palette["panel"], corner_radius=20)
         self.content.grid(row=0, column=1, sticky="nsew", padx=22, pady=20)
@@ -181,7 +162,7 @@ class BillingApp(ctk.CTk):
         self.qty_entry.insert(0, "1")
         self.qty_entry.grid(row=2, column=1, padx=10, pady=8, sticky="ew")
 
-        self.add_selected_product_btn = ctk.CTkButton(item_card, text="Add Product", image=self.icons["add"], fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._add_selected_product)
+        self.add_selected_product_btn = ctk.CTkButton(item_card, text="Add Product", fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._add_selected_product)
         self.add_selected_product_btn.grid(row=3, column=0, columnspan=2, padx=18, pady=10, sticky="ew")
 
         self.items_box = ctk.CTkTextbox(item_card)
@@ -192,10 +173,10 @@ class BillingApp(ctk.CTk):
         bottom.grid(row=2, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 16))
         bottom.grid_columnconfigure((0, 1), weight=1)
 
-        self.save_doc_btn = ctk.CTkButton(bottom, text="Save Document", image=self.icons["save"], fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], height=44, command=self._save_document)
+        self.save_doc_btn = ctk.CTkButton(bottom, text="Save Document", fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], height=44, command=self._save_document)
         self.save_doc_btn.grid(row=0, column=0, padx=(0, 6), sticky="ew")
 
-        self.pdf_btn = ctk.CTkButton(bottom, text="Generate PDF", image=self.icons["pdf"], fg_color=self.palette["success"], hover_color="#34d399", height=44, command=self._generate_latest_pdf)
+        self.pdf_btn = ctk.CTkButton(bottom, text="Generate PDF", fg_color=self.palette["success"], hover_color="#34d399", height=44, command=self._generate_latest_pdf)
         self.pdf_btn.grid(row=0, column=1, padx=(6, 0), sticky="ew")
 
         return frame
@@ -217,7 +198,7 @@ class BillingApp(ctk.CTk):
         self.sort_menu = ctk.CTkOptionMenu(filter_card, values=["issue_date_desc", "issue_date_asc", "client_asc", "country_asc", "number_asc"])
         self.sort_menu.set("issue_date_desc")
         self.sort_menu.grid(row=1, column=2, padx=8, pady=(0, 16), sticky="ew")
-        ctk.CTkButton(filter_card, text="Refresh", image=self.icons["refresh"], fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._refresh_documents).grid(row=1, column=3, padx=16, pady=(0, 16), sticky="ew")
+        ctk.CTkButton(filter_card, text="Refresh", fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._refresh_documents).grid(row=1, column=3, padx=16, pady=(0, 16), sticky="ew")
 
         self.docs_box = ctk.CTkTextbox(frame)
         self.docs_box.grid(row=1, column=0, padx=16, pady=8, sticky="nsew")
@@ -254,7 +235,7 @@ class BillingApp(ctk.CTk):
         self.client_category_menu.set("Other")
         self.client_category_menu.grid(row=9, column=1, padx=10, pady=7, sticky="ew")
 
-        ctk.CTkButton(form, text="Save Client", image=self.icons["save"], fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._save_client).grid(row=10, column=0, columnspan=2, padx=16, pady=(12, 16), sticky="ew")
+        ctk.CTkButton(form, text="Save Client", fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._save_client).grid(row=10, column=0, columnspan=2, padx=16, pady=(12, 16), sticky="ew")
 
         list_card = self._card(frame, "Clients (sorted by country)")
         list_card.grid(row=0, column=1, padx=(8, 16), pady=16, sticky="nsew")
@@ -264,7 +245,7 @@ class BillingApp(ctk.CTk):
         self.country_filter_menu = ctk.CTkOptionMenu(list_card, values=["All"])
         self.country_filter_menu.set("All")
         self.country_filter_menu.grid(row=1, column=0, padx=16, pady=(0, 8), sticky="ew")
-        ctk.CTkButton(list_card, text="Apply Country Sort", image=self.icons["refresh"], command=self._refresh_clients).grid(row=2, column=0, padx=16, pady=(0, 8), sticky="ew")
+        ctk.CTkButton(list_card, text="Apply Country Sort", command=self._refresh_clients).grid(row=2, column=0, padx=16, pady=(0, 8), sticky="ew")
 
         self.clients_box = ctk.CTkTextbox(list_card)
         self.clients_box.grid(row=3, column=0, padx=16, pady=(0, 16), sticky="nsew")
@@ -291,7 +272,7 @@ class BillingApp(ctk.CTk):
         self.product_price_entry = ctk.CTkEntry(form)
         self.product_price_entry.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
 
-        ctk.CTkButton(form, text="Save Product", image=self.icons["save"], fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._save_product).grid(row=4, column=0, columnspan=2, padx=16, pady=14, sticky="ew")
+        ctk.CTkButton(form, text="Save Product", fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._save_product).grid(row=4, column=0, columnspan=2, padx=16, pady=14, sticky="ew")
 
         list_card = self._card(frame, "Saved Products")
         list_card.grid(row=0, column=1, padx=(8, 16), pady=16, sticky="nsew")
@@ -324,7 +305,7 @@ class BillingApp(ctk.CTk):
         self.set_iban = row(5, "IBAN")
         self.set_logo = row(6, "Logo File Path")
 
-        ctk.CTkButton(card, text="Save Settings", image=self.icons["save"], fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._save_settings).grid(row=7, column=0, columnspan=2, padx=16, pady=16, sticky="ew")
+        ctk.CTkButton(card, text="Save Settings", fg_color=self.palette["accent"], hover_color=self.palette["accent_hover"], command=self._save_settings).grid(row=7, column=0, columnspan=2, padx=16, pady=16, sticky="ew")
         return frame
 
     def _msg(self, text: str) -> None:

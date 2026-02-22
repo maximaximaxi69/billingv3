@@ -12,6 +12,8 @@ Professional desktop invoicing app with clients, products, documents, settings, 
 - New Document view uses dropdowns from saved Clients and Products
 - Company settings store logo path and company banking info
 - PDF invoice generation with company logo in top-left
+- Bilingual Latvian/English invoice labels in PDF output
+- Latvian accounting total rows (Summa bez PVN, PVN %, KOPĀ, Saņemts avanss, Kopā apmaksai)
 
 ## Run (Windows)
 
@@ -23,6 +25,10 @@ pip install -e .
 python -m billing
 ```
 
+## Build EXE
+
+```powershell
+pyinstaller --noconfirm --clean --windowed --name billingv3 --collect-all customtkinter run.py
 ## Icon mapping and setup
 
 Create folder:
