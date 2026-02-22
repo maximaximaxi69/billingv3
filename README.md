@@ -1,20 +1,17 @@
 # billingv3 (CustomTkinter Desktop App)
 
-A desktop billing app with a sidebar-based GUI inspired by invoice dashboards.
+Professional desktop invoicing app with clients, products, documents, settings, and PDF export.
 
-## Included functionality
+## Workflow features
 
-- 3 invoice types:
-  - Standard invoice
-  - Proforma invoice
-  - Recurring invoice
-- Pavadzīme (delivery note)
-- Bilingual UI support: English + Latvian (EN/LV switch)
-- Client data storage (JSON on local disk)
-- Document save/history view
-- Sorting and searching across invoices and pavadzīmes
-- Mark document as paid
-- Existing invoice total logic preserved (`InvoiceItem`, tax, totals)
+- Sidebar tabs: **New Document**, **Documents**, **Clients**, **Products**, **Settings**
+- 3 invoice types + pavadzīme
+- Clients with bank data: Bank, SWIFT, IBAN, Category
+- Country-based client sorting/filter
+- Product catalog with pre-defined descriptions and prices
+- New Document view uses dropdowns from saved Clients and Products
+- Company settings store logo path and company banking info
+- PDF invoice generation with company logo in top-left
 
 ## Run (Windows)
 
@@ -26,61 +23,46 @@ pip install -e .
 python -m billing
 ```
 
-## Data storage
+## Icon mapping and setup
 
-Saved to:
+Create folder:
 
-- `data/billing_data.json`
+- `assets/icons/`
 
-## Run tests
+Required PNG files (transparent background):
+
+- `new_document.png` -> New Document button
+- `documents.png` -> Documents button
+- `clients.png` -> Clients button
+- `add.png` -> Products button and add actions
+- `settings.png` -> Settings button
+- `save.png` -> Save actions
+- `refresh.png` -> Refresh actions
+- `paid.png` -> Mark-paid action
+
+Icon spec:
+
+- format: PNG
+- size: 24x24 or 32x32 px
+- app renders at 18x18 px
+
+## Build EXE
+
+```powershell
+pyinstaller --noconfirm --clean --windowed --name billingv3 --collect-all customtkinter --collect-all PIL --add-data "assets;assets" run.py
+```
+
+## PDF dependency
+
+PDF generation uses reportlab. If missing:
+
+```powershell
+pip install reportlab
+```
+
+## Tests
 
 ```powershell
 pip install -e .[dev]
 python -m pytest
-```
-
-
-## Build a Windows .exe (PyInstaller)
-
-If you see `ImportError: attempted relative import with no known parent package`, build from `run.py` instead of `billing/__main__.py`.
-
-```powershell
-pip install pyinstaller
-pyinstaller --noconfirm --clean --windowed --name billingv3 --collect-all customtkinter run.py
-```
-
-Executable output:
-
-- `dist\billingv3\billingv3.exe`
-
-
-## Modern UI icon setup (required for icon buttons)
-
-Create this folder in the project root:
-
-- `assets/icons/`
-
-Put PNG icons there with **transparent background** and these exact filenames:
-
-- `assets/icons/new_document.png`
-- `assets/icons/documents.png`
-- `assets/icons/clients.png`
-- `assets/icons/save.png`
-- `assets/icons/add.png`
-- `assets/icons/refresh.png`
-- `assets/icons/paid.png`
-
-Recommended icon specs:
-
-- Format: `.png`
-- Canvas: **24x24 px** (or 32x32 px)
-- Monochrome icon (white/light) for dark theme
-- Transparent background
-
-The app renders icons at 18x18 on buttons. If a file is missing, the app still works (button shows text only).
-
-## Updated .exe build command (includes icon/image assets)
-
-```powershell
-pyinstaller --noconfirm --clean --windowed --name billingv3 --collect-all customtkinter --collect-all PIL --add-data "assets;assets" run.py
 ```

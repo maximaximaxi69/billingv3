@@ -5,7 +5,9 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from .documents import BillingDocument, Client
+from decimal import Decimal
+
+from .documents import BillingDocument, Client, CompanySettings, Product
 
 
 class BillingRepository:
@@ -13,7 +15,7 @@ class BillingRepository:
         self.storage_path = storage_path or Path("data") / "billing_data.json"
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.storage_path.exists():
-            self._write({"clients": [], "documents": []})
+            self._write({"clients": [], "products": [], "documents": [], "settings": asdict(CompanySettings())})
 
     def _read(self) -> dict[str, Any]:
         return json.loads(self.storage_path.read_text(encoding="utf-8"))
@@ -21,20 +23,41 @@ class BillingRepository:
     def _write(self, payload: dict[str, Any]) -> None:
         self.storage_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    def list_clients(self) -> list[Client]:
-        data = self._read()
-        return [Client(**entry) for entry in data["clients"]]
+    def list_clients(self, country: str | None = None) -> list[Client]:
+        clients = [Client(**entry) for entry in self._read()["clients"]]
+        if country:
+            clients = [c for c in clients if c.country.lower() == country.lower()]
+        return sorted(clients, key=lambda c: (c.country.lower(), c.name.lower()))
 
     def add_or_update_client(self, client: Client) -> None:
         data = self._read()
         clients = [entry for entry in data["clients"] if entry["registration_number"] != client.registration_number]
         clients.append(asdict(client))
-        data["clients"] = sorted(clients, key=lambda x: x["name"].lower())
+        data["clients"] = clients
+        self._write(data)
+
+    def list_products(self) -> list[Product]:
+        products = [Product(name=p["name"], description=p["description"], unit_price=Decimal(p["unit_price"])) for p in self._read()["products"]]
+        return sorted(products, key=lambda p: p.name.lower())
+
+    def add_or_update_product(self, product: Product) -> None:
+        data = self._read()
+        products = [p for p in data["products"] if p["name"].lower() != product.name.lower()]
+        products.append({"name": product.name, "description": product.description, "unit_price": str(product.unit_price)})
+        data["products"] = products
+        self._write(data)
+
+    def get_settings(self) -> CompanySettings:
+        settings = self._read().get("settings", {})
+        return CompanySettings(**{**asdict(CompanySettings()), **settings})
+
+    def save_settings(self, settings: CompanySettings) -> None:
+        data = self._read()
+        data["settings"] = asdict(settings)
         self._write(data)
 
     def list_documents(self) -> list[BillingDocument]:
-        data = self._read()
-        return [BillingDocument.from_dict(entry) for entry in data["documents"]]
+        return [BillingDocument.from_dict(entry) for entry in self._read()["documents"]]
 
     def next_document_number(self, document_type: str) -> str:
         prefix_map = {
@@ -44,24 +67,22 @@ class BillingRepository:
             "delivery_note": "PAV",
         }
         prefix = prefix_map[document_type]
-        docs = self.list_documents()
-        current = [doc for doc in docs if doc.number.startswith(prefix)]
-        serial = len(current) + 1
-        return f"{prefix}-{serial:05d}"
+        current = [doc for doc in self.list_documents() if doc.number.startswith(prefix)]
+        return f"{prefix}-{len(current)+1:05d}"
 
     def add_document(self, document: BillingDocument) -> None:
         data = self._read()
-        docs = [entry for entry in data["documents"] if entry["number"] != document.number]
-        docs.append(document.to_dict())
-        data["documents"] = docs
+        documents = [d for d in data["documents"] if d["number"] != document.number]
+        documents.append(document.to_dict())
+        data["documents"] = documents
         self._write(data)
 
     def mark_document_paid(self, number: str) -> bool:
         data = self._read()
         updated = False
-        for entry in data["documents"]:
-            if entry["number"] == number:
-                entry["status"] = "paid"
+        for d in data["documents"]:
+            if d["number"] == number:
+                d["status"] = "paid"
                 updated = True
         if updated:
             self._write(data)
@@ -79,26 +100,19 @@ def filter_and_sort_documents(
     if doc_type != "all":
         result = [doc for doc in result if doc.document_type == doc_type]
 
-    lowered = search.strip().lower()
-    if lowered:
-        result = [
-            doc
-            for doc in result
-            if lowered in doc.number.lower()
-            or lowered in doc.client.name.lower()
-            or lowered in doc.client.registration_number.lower()
-        ]
+    q = search.strip().lower()
+    if q:
+        result = [doc for doc in result if q in doc.number.lower() or q in doc.client.name.lower() or q in doc.client.country.lower()]
 
-    key_map = {
+    keys = {
         "issue_date_desc": lambda d: d.issue_date.toordinal(),
         "issue_date_asc": lambda d: d.issue_date.toordinal(),
         "client_asc": lambda d: d.client.name.lower(),
+        "country_asc": lambda d: d.client.country.lower(),
         "number_asc": lambda d: d.number,
     }
-
     reverse = sort_by == "issue_date_desc"
-    if sort_by not in key_map:
+    if sort_by not in keys:
         sort_by = "issue_date_desc"
         reverse = True
-
-    return sorted(result, key=key_map[sort_by], reverse=reverse)
+    return sorted(result, key=keys[sort_by], reverse=reverse)
