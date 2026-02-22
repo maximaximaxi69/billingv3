@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from billing import InvoiceItem, calculate_invoice_totals
+from billing.invoice import InvoiceItem, calculate_invoice_totals
 
 
 def test_calculate_invoice_totals():
