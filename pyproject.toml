@@ -5,6 +5,7 @@ description = "Simple billing desktop app with CustomTkinter"
 requires-python = ">=3.11"
 dependencies = [
   "customtkinter>=5.2.2",
+  "pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]
