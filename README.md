@@ -29,6 +29,33 @@ python -m billing
 
 ```powershell
 pyinstaller --noconfirm --clean --windowed --name billingv3 --collect-all customtkinter run.py
+## Icon mapping and setup
+
+Create folder:
+
+- `assets/icons/`
+
+Required PNG files (transparent background):
+
+- `new_document.png` -> New Document button
+- `documents.png` -> Documents button
+- `clients.png` -> Clients button
+- `add.png` -> Products button and add actions
+- `settings.png` -> Settings button
+- `save.png` -> Save actions
+- `refresh.png` -> Refresh actions
+- `paid.png` -> Mark-paid action
+
+Icon spec:
+
+- format: PNG
+- size: 24x24 or 32x32 px
+- app renders at 18x18 px
+
+## Build EXE
+
+```powershell
+pyinstaller --noconfirm --clean --windowed --name billingv3 --collect-all customtkinter --collect-all PIL --add-data "assets;assets" run.py
 ```
 
 ## PDF dependency
